@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Health Log</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #a8d8ea;
+    --sky-light: #d6eef8;
+    --sky-pale: #eef7fc;
+    --brown: #8b6f5e;
+    --brown-light: #c4a882;
+    --brown-pale: #f5ede6;
+    --cream: #fdf8f3;
+    --blush: #f2c4b8;
+    --mint: #b8dfd0;
+    --lavender: #d4c5e8;
+    --yellow: #fce8a2;
+    --text: #4a3728;
+    --text-muted: #9e7c6a;
+    --text-light: #c4a882;
+    --white: #ffffff;
+    --border: rgba(139,111,94,0.15);
+    --shadow: rgba(139,111,94,0.10);
+    --radius: 14px;
+    --period: #f2c4b8;
+    --mood1: #e07b6a;
+    --mood2: #e0a045;
+    --mood3: #c4a882;
+    --mood4: #70b77e;
+    --mood5: #5b9bd5;
+    --cond1: #70b77e;
+    --cond2: #e0a045;
+    --cond3: #e07b6a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    background: var(--sky-pale);
+    min-height: 100vh;
+    padding: 20px 16px 40px;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  .widget { max-width: 680px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; padding: 0 2px;
+  }
+  .header-left { display: flex; flex-direction: column; gap: 2px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--brown); }
+  .header-sub { font-size: 11px; color: var(--text-muted); }
+  .header-right { display: flex; gap: 6px; }
+  .tab-btn {
+    font-size: 11px; font-weight: 700; padding: 5px 12px;
+    border: 1.5px solid var(--border); background: var(--white);
+    border-radius: 99px; cursor: pointer; color: var(--text-muted);
+    font-family: 'Zen Maru Gothic', sans-serif; transition: all 0.15s;
+  }
+  .tab-btn.active, .tab-btn:hover { background: var(--sky-pale); border-color: var(--sky); color: var(--brown); }
+
+  /* Loading */
+  .loading-bar { height: 3px; background: var(--sky-light); border-radius: 99px; margin-bottom: 12px; overflow: hidden; opacity: 0; transition: opacity 0.2s; }
+  .loading-bar.visible { opacity: 1; }
+  .loading-bar-fill { height: 100%; background: linear-gradient(90deg, var(--sky), var(--brown-light)); border-radius: 99px; animation: loadingAnim 1.2s ease-in-out infinite; }
+  @keyframes loadingAnim { 0%{width:0%;margin-left:0} 50%{width:70%;margin-left:15%} 100%{width:0%;margin-left:100%} }
+
+  /* Today input card */
+  .today-card {
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 18px 18px 16px;
+    box-shadow: 0 2px 12px var(--shadow); margin-bottom: 12px;
+  }
+  .today-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .today-date { font-family: 'DM Serif Display', serif; font-size: 15px; color: var(--brown); }
+  .weather-display { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); }
+  .weather-icon { font-size: 18px; }
+
+  .input-section { margin-bottom: 14px; }
+  .input-label { font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.08em; margin-bottom: 7px; display: block; }
+
+  /* Mood selector */
+  .mood-selector { display: flex; gap: 8px; }
+  .mood-btn {
+    flex: 1; padding: 8px 4px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--white);
+    cursor: pointer; text-align: center; transition: all 0.15s;
+    font-size: 20px; line-height: 1;
+  }
+  .mood-btn:hover { border-color: var(--sky); background: var(--sky-pale); transform: scale(1.05); }
+  .mood-btn.selected { transform: scale(1.1); }
+  .mood-btn[data-mood="1"].selected { background: rgba(224,123,106,0.15); border-color: var(--mood1); }
+  .mood-btn[data-mood="2"].selected { background: rgba(224,160,69,0.15); border-color: var(--mood2); }
+  .mood-btn[data-mood="3"].selected { background: rgba(196,168,130,0.15); border-color: var(--mood3); }
+  .mood-btn[data-mood="4"].selected { background: rgba(112,183,126,0.15); border-color: var(--mood4); }
+  .mood-btn[data-mood="5"].selected { background: rgba(91,155,213,0.15); border-color: var(--mood5); }
+  .mood-label { font-size: 8.5px; color: var(--text-muted); margin-top: 3px; }
+
+  /* Condition selector */
+  .cond-selector { display: flex; gap: 8px; }
+  .cond-btn {
+    flex: 1; padding: 8px 10px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--white);
+    cursor: pointer; text-align: center; transition: all 0.15s;
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    font-family: 'Zen Maru Gothic', sans-serif;
+  }
+  .cond-btn:hover { border-color: var(--sky); background: var(--sky-pale); }
+  .cond-btn[data-cond="1"].selected { background: rgba(112,183,126,0.15); border-color: var(--cond1); color: var(--cond1); }
+  .cond-btn[data-cond="2"].selected { background: rgba(224,160,69,0.15); border-color: var(--cond2); color: var(--cond2); }
+  .cond-btn[data-cond="3"].selected { background: rgba(224,123,106,0.15); border-color: var(--cond3); color: var(--cond3); }
+
+  /* Toggle row */
+  .toggle-row { display: flex; gap: 10px; align-items: stretch; }
+  .toggle-row .input-section { flex: 1; }
+
+  /* Period toggle */
+  .period-toggle {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 14px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--white);
+    cursor: pointer; transition: all 0.15s; user-select: none;
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    font-family: 'Zen Maru Gothic', sans-serif; width: 100%;
+    justify-content: center;
+  }
+  .period-toggle.on { background: rgba(242,196,184,0.2); border-color: var(--period); color: var(--brown); }
+  .period-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: background 0.15s; }
+  .period-toggle.on .period-dot { background: var(--period); }
+
+  /* Sleep input */
+  .sleep-input-wrap { display: flex; align-items: center; gap: 6px; }
+  .sleep-input {
+    width: 70px; padding: 8px 10px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--sky-pale);
+    font-family: 'Zen Maru Gothic', sans-serif; font-size: 13px;
+    color: var(--text); outline: none; text-align: center;
+    transition: border-color 0.15s;
+  }
+  .sleep-input:focus { border-color: var(--sky); background: var(--white); }
+  .sleep-unit { font-size: 12px; color: var(--text-muted); }
+
+  /* Note */
+  .note-input {
+    width: 100%; padding: 9px 12px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--sky-pale);
+    font-family: 'Zen Maru Gothic', sans-serif; font-size: 12px;
+    color: var(--text); outline: none; resize: none; height: 60px;
+    transition: border-color 0.15s;
+  }
+  .note-input:focus { border-color: var(--sky); background: var(--white); }
+
+  /* Save button */
+  .save-btn {
+    width: 100%; padding: 11px; border-radius: 99px;
+    background: var(--sky); border: none; color: white;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+    font-family: 'Zen Maru Gothic', sans-serif; transition: all 0.15s;
+    margin-top: 4px;
+  }
+  .save-btn:hover { background: #8ecde5; }
+  .save-btn.saved { background: var(--mint); }
+
+  /* ── Graph view ── */
+  .graph-view { display: none; }
+  .graph-view.active { display: block; }
+  .log-view.hidden { display: none; }
+
+  .graph-card {
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 16px;
+    box-shadow: 0 2px 12px var(--shadow); margin-bottom: 12px;
+  }
+  .graph-title { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 0.05em; }
+
+  /* Mini chart */
+  .chart-wrap { overflow-x: auto; padding-bottom: 4px; }
+  .chart { display: flex; align-items: flex-end; gap: 3px; min-height: 80px; padding: 4px 0; }
+  .chart-col { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 28px; }
+  .chart-bar-wrap { flex: 1; display: flex; align-items: flex-end; width: 100%; min-height: 60px; }
+  .chart-bar {
+    width: 100%; border-radius: 4px 4px 0 0;
+    transition: height 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    min-height: 4px;
+  }
+  .chart-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--white); box-shadow: 0 1px 3px var(--shadow); }
+  .chart-label { font-size: 8.5px; color: var(--text-muted); text-align: center; }
+  .chart-period-row { display: flex; gap: 3px; margin-bottom: 2px; }
+  .chart-period-cell { min-width: 28px; height: 4px; border-radius: 2px; }
+  .chart-period-cell.on { background: var(--period); }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* Recent log list */
+  .log-list { display: flex; flex-direction: column; gap: 6px; }
+  .log-row {
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 1px 6px var(--shadow);
+  }
+  .log-date { font-size: 11px; font-weight: 700; color: var(--brown); min-width: 52px; }
+  .log-weather { font-size: 14px; min-width: 20px; text-align: center; }
+  .log-mood { font-size: 16px; }
+  .log-cond { font-size: 11px; font-weight: 600; min-width: 60px; }
+  .log-sleep { font-size: 10px; color: var(--text-muted); min-width: 40px; }
+  .log-period { font-size: 9px; padding: 2px 6px; background: rgba(242,196,184,0.3); color: var(--brown); border-radius: 99px; }
+  .log-note { font-size: 10px; color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .empty-log { text-align: center; padding: 30px; color: var(--text-muted); font-size: 13px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--brown); color: white; font-size: 12px; font-weight: 500;
+    padding: 8px 18px; border-radius: 99px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    opacity: 0; transition: all 0.3s ease; pointer-events: none; z-index: 9999;
+    font-family: 'Zen Maru Gothic', sans-serif;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="widget">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="header-title">Health Log ✦</div>
+      <div class="header-sub" id="headerSub">今日の記録</div>
+    </div>
+    <div class="header-right">
+      <button class="tab-btn active" id="tabLog" onclick="switchTab('log')">記録</button>
+      <button class="tab-btn" id="tabGraph" onclick="switchTab('graph')">グラフ</button>
+    </div>
+  </div>
+
+  <div class="loading-bar" id="loadingBar"><div class="loading-bar-fill"></div></div>
+
+  <!-- 記録タブ -->
+  <div id="logView">
+    <div class="today-card">
+      <div class="today-header">
+        <div class="today-date" id="todayDate">—</div>
+        <div class="weather-display" id="weatherDisplay">
+          <span class="weather-icon" id="weatherIcon">—</span>
+          <span id="weatherText">取得中...</span>
+        </div>
+      </div>
+
+      <!-- 気分 -->
+      <div class="input-section">
+        <span class="input-label">✦ 気分</span>
+        <div class="mood-selector">
+          <div class="mood-btn" data-mood="1" onclick="selectMood(1)">😫<div class="mood-label">最悪</div></div>
+          <div class="mood-btn" data-mood="2" onclick="selectMood(2)">😕<div class="mood-label">しんどい</div></div>
+          <div class="mood-btn" data-mood="3" onclick="selectMood(3)">😐<div class="mood-label">普通</div></div>
+          <div class="mood-btn" data-mood="4" onclick="selectMood(4)">🙂<div class="mood-label">良い</div></div>
+          <div class="mood-btn" data-mood="5" onclick="selectMood(5)">😄<div class="mood-label">最高</div></div>
+        </div>
+      </div>
+
+      <!-- 体調 -->
+      <div class="input-section">
+        <span class="input-label">✦ 体調</span>
+        <div class="cond-selector">
+          <div class="cond-btn" data-cond="1" onclick="selectCond(1)">🟢 普通</div>
+          <div class="cond-btn" data-cond="2" onclick="selectCond(2)">🟡 ちょっとしんどい</div>
+          <div class="cond-btn" data-cond="3" onclick="selectCond(3)">🔴 しんどい</div>
+        </div>
+      </div>
+
+      <!-- 生理・睡眠 -->
+      <div class="toggle-row">
+        <div class="input-section">
+          <span class="input-label">✦ 生理中</span>
+          <div class="period-toggle" id="periodToggle" onclick="togglePeriod()">
+            <div class="period-dot"></div>
+            <span id="periodLabel">OFF</span>
+          </div>
+        </div>
+        <div class="input-section">
+          <span class="input-label">✦ 睡眠時間</span>
+          <div class="sleep-input-wrap">
+            <input class="sleep-input" id="sleepInput" type="number" min="0" max="24" step="0.5" placeholder="7.5">
+            <span class="sleep-unit">時間</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- メモ -->
+      <div class="input-section">
+        <span class="input-label">✦ 体調メモ（任意）</span>
+        <textarea class="note-input" id="noteInput" placeholder="頭痛、だるさ、ほてりなど…"></textarea>
+      </div>
+
+      <button class="save-btn" id="saveBtn" onclick="saveLog()">今日の記録を保存 ✦</button>
+    </div>
+
+    <!-- 直近ログリスト -->
+    <div class="graph-card">
+      <div class="graph-title">✦ 直近の記録</div>
+      <div class="log-list" id="logList"></div>
+    </div>
+  </div>
+
+  <!-- グラフタブ -->
+  <div class="graph-view" id="graphView">
+    <div class="graph-card">
+      <div class="graph-title">✦ 気分・体調の推移（直近30日）</div>
+      <div class="chart-wrap">
+        <div class="chart-period-row" id="periodRow"></div>
+        <div class="chart" id="moodChart"></div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--mood5)"></div>気分最高</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--mood3)"></div>気分普通</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--mood1)"></div>気分最悪</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--period);opacity:0.6"></div>生理期間</div>
+      </div>
+    </div>
+
+    <div class="graph-card">
+      <div class="graph-title">✦ 睡眠時間の推移（直近30日）</div>
+      <div class="chart-wrap">
+        <div class="chart" id="sleepChart"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Supabase ──
+const SUPABASE_URL = 'https://nbduyknklcwqbinvhoih.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iZHV5a25rbGN3cWJpbnZob2loIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2NjMzNjUsImV4cCI6MjA4NzIzOTM2NX0.kzZYqBwfc8vpGszN2W3so2jURsZXlrve4KvUydYKIfA';
+
+async function sbFetch(path, options = {}) {
+  const { headers: extraHeaders, ...restOptions } = options;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...restOptions,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      ...(extraHeaders || {})
+    }
+  });
+  if (res.status === 204) return null;
+  if (!res.ok) { const err = await res.text(); throw new Error(err); }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// ── State ──
+let selectedMood = null;
+let selectedCond = null;
+let periodOn = false;
+let allLogs = [];
+let todayLog = null;
+let currentTab = 'log';
+
+// ── Date ──
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDateJP(dateStr) {
+  const d = new Date(dateStr);
+  const dow = ['日','月','火','水','木','金','土'][d.getDay()];
+  return `${d.getMonth()+1}/${d.getDate()}（${dow}）`;
+}
+
+// ── Weather (Open-Meteo, 埼玉・川口) ──
+const LAT = 35.8075, LON = 139.7249;
+const WMO_MAP = {
+  0:'☀️', 1:'🌤️', 2:'⛅', 3:'☁️',
+  45:'🌫️', 48:'🌫️',
+  51:'🌦️', 53:'🌦️', 55:'🌧️',
+  61:'🌧️', 63:'🌧️', 65:'🌧️',
+  71:'🌨️', 73:'🌨️', 75:'🌨️',
+  80:'🌦️', 81:'🌧️', 82:'⛈️',
+  95:'⛈️', 96:'⛈️', 99:'⛈️',
+};
+const WMO_TEXT = {
+  0:'晴れ', 1:'ほぼ晴れ', 2:'曇り時々晴れ', 3:'曇り',
+  45:'霧', 48:'霧',
+  51:'小雨', 53:'雨', 55:'強雨',
+  61:'小雨', 63:'雨', 65:'大雨',
+  71:'小雪', 73:'雪', 75:'大雪',
+  80:'にわか雨', 81:'雨', 82:'激しい雨',
+  95:'雷雨', 96:'雷雨', 99:'激しい雷雨',
+};
+
+async function fetchWeather() {
+  try {
+    const res = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=weathercode,temperature_2m&timezone=Asia/Tokyo`
+    );
+    const data = await res.json();
+    const code = data.current.weathercode;
+    const temp = Math.round(data.current.temperature_2m);
+    const icon = WMO_MAP[code] || '🌡️';
+    const text = WMO_TEXT[code] || '—';
+    document.getElementById('weatherIcon').textContent = icon;
+    document.getElementById('weatherText').textContent = `${text} ${temp}°C`;
+    return { icon, text: `${text} ${temp}°C` };
+  } catch(e) {
+    document.getElementById('weatherIcon').textContent = '—';
+    document.getElementById('weatherText').textContent = '取得失敗';
+    return { icon: '—', text: '—' };
+  }
+}
+
+// ── Load ──
+function setLoading(val) {
+  document.getElementById('loadingBar').classList.toggle('visible', val);
+}
+
+async function loadLogs() {
+  setLoading(true);
+  try {
+    const rows = await sbFetch('health_logs?select=*&order=date.desc&limit=60');
+    allLogs = rows || [];
+    todayLog = allLogs.find(r => r.date === todayStr()) || null;
+    if (todayLog) restoreToday();
+    renderLogList();
+    if (currentTab === 'graph') renderGraphs();
+  } catch(e) {
+    showToast('読み込みエラー: ' + e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function restoreToday() {
+  if (todayLog.mood) selectMood(todayLog.mood);
+  if (todayLog.condition) selectCond(todayLog.condition);
+  if (todayLog.period) { periodOn = true; document.getElementById('periodToggle').classList.add('on'); document.getElementById('periodLabel').textContent = 'ON'; }
+  if (todayLog.sleep_hours) document.getElementById('sleepInput').value = todayLog.sleep_hours;
+  if (todayLog.condition_note) document.getElementById('noteInput').value = todayLog.condition_note;
+  document.getElementById('saveBtn').textContent = '記録を更新する ✦';
+}
+
+// ── Input ──
+function selectMood(val) {
+  selectedMood = val;
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector(`.mood-btn[data-mood="${val}"]`).classList.add('selected');
+}
+
+function selectCond(val) {
+  selectedCond = val;
+  document.querySelectorAll('.cond-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector(`.cond-btn[data-cond="${val}"]`).classList.add('selected');
+}
+
+function togglePeriod() {
+  periodOn = !periodOn;
+  document.getElementById('periodToggle').classList.toggle('on', periodOn);
+  document.getElementById('periodLabel').textContent = periodOn ? 'ON' : 'OFF';
+}
+
+// ── Save ──
+async function saveLog() {
+  const weather = document.getElementById('weatherIcon').textContent;
+  const weatherText = document.getElementById('weatherText').textContent;
+  const sleep = document.getElementById('sleepInput').value;
+  const note = document.getElementById('noteInput').value.trim();
+
+  const payload = {
+    date: todayStr(),
+    mood: selectedMood,
+    condition: selectedCond,
+    condition_note: note || null,
+    period: periodOn,
+    sleep_hours: sleep ? parseFloat(sleep) : null,
+    weather: weatherText,
+    weather_icon: weather,
+  };
+
+  setLoading(true);
+  try {
+    await sbFetch('health_logs', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(payload)
+    });
+    const btn = document.getElementById('saveBtn');
+    btn.textContent = '保存しました ✦';
+    btn.classList.add('saved');
+    setTimeout(() => { btn.textContent = '記録を更新する ✦'; btn.classList.remove('saved'); }, 2000);
+    await loadLogs();
+    showToast('記録しました ✦');
+  } catch(e) {
+    showToast('保存エラー: ' + e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ── Log list ──
+const MOOD_EMOJI = ['','😫','😕','😐','🙂','😄'];
+const COND_LABEL = ['','🟢 普通','🟡 しんどめ','🔴 しんどい'];
+const COND_COLOR = ['','var(--cond1)','var(--cond2)','var(--cond3)'];
+
+function renderLogList() {
+  const el = document.getElementById('logList');
+  const recent = allLogs.slice(0, 14);
+  if (recent.length === 0) {
+    el.innerHTML = `<div class="empty-log">まだ記録がありません<br><span style="font-size:11px;color:var(--text-light)">今日の記録から始めてみよう ✦</span></div>`;
+    return;
+  }
+  el.innerHTML = recent.map(r => `
+    <div class="log-row">
+      <div class="log-date">${formatDateJP(r.date)}</div>
+      <div class="log-weather">${r.weather_icon || '—'}</div>
+      <div class="log-mood">${r.mood ? MOOD_EMOJI[r.mood] : '—'}</div>
+      <div class="log-cond" style="color:${r.condition ? COND_COLOR[r.condition] : 'var(--text-muted)'}">${r.condition ? COND_LABEL[r.condition] : '—'}</div>
+      <div class="log-sleep">${r.sleep_hours != null ? r.sleep_hours + 'h' : '—'}</div>
+      ${r.period ? '<div class="log-period">生理中</div>' : ''}
+      ${r.condition_note ? `<div class="log-note">${r.condition_note}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+// ── Graphs ──
+function renderGraphs() {
+  const logs30 = [...allLogs].sort((a,b) => a.date.localeCompare(b.date)).slice(-30);
+  if (logs30.length === 0) return;
+
+  const MOOD_COLORS = ['','#e07b6a','#e0a045','#c4a882','#70b77e','#5b9bd5'];
+
+  // 気分チャート
+  const moodChart = document.getElementById('moodChart');
+  const periodRow = document.getElementById('periodRow');
+  moodChart.innerHTML = logs30.map(r => {
+    const h = r.mood ? (r.mood / 5 * 60) : 4;
+    const color = r.mood ? MOOD_COLORS[r.mood] : 'var(--border)';
+    const label = formatDateJP(r.date).split('（')[0];
+    return `<div class="chart-col">
+      <div class="chart-bar-wrap">
+        <div class="chart-bar" style="height:${h}px;background:${color}88;border-top:2px solid ${color}"></div>
+      </div>
+      <div class="chart-label">${label}</div>
+    </div>`;
+  }).join('');
+
+  periodRow.innerHTML = logs30.map(r =>
+    `<div class="chart-period-cell ${r.period ? 'on' : ''}" style="min-width:28px"></div>`
+  ).join('');
+
+  // 睡眠チャート
+  const sleepChart = document.getElementById('sleepChart');
+  const maxSleep = Math.max(8, ...logs30.map(r => r.sleep_hours || 0));
+  sleepChart.innerHTML = logs30.map(r => {
+    const h = r.sleep_hours ? (r.sleep_hours / maxSleep * 60) : 4;
+    const color = r.sleep_hours >= 7 ? '#70b77e' : r.sleep_hours >= 5 ? '#e0a045' : '#e07b6a';
+    const label = formatDateJP(r.date).split('（')[0];
+    return `<div class="chart-col">
+      <div class="chart-bar-wrap">
+        <div class="chart-bar" style="height:${r.sleep_hours ? h : 4}px;background:${r.sleep_hours ? color + '88' : 'var(--border)'};border-top:2px solid ${r.sleep_hours ? color : 'var(--border)'}"></div>
+      </div>
+      <div class="chart-label">${label}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Tab ──
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('logView').classList.toggle('hidden', tab !== 'log');
+  document.getElementById('graphView').classList.toggle('active', tab === 'graph');
+  document.getElementById('tabLog').classList.toggle('active', tab === 'log');
+  document.getElementById('tabGraph').classList.toggle('active', tab === 'graph');
+  if (tab === 'graph') renderGraphs();
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Init ──
+(async () => {
+  const d = new Date();
+  const dow = ['日','月','火','水','木','金','土'][d.getDay()];
+  document.getElementById('todayDate').textContent =
+    `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${dow}）`;
+  fetchWeather();
+  await loadLogs();
+})();
+</script>
+</body>
+</html>
