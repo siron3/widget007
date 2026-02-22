@@ -36,6 +36,13 @@
     --cond3: #e07b6a;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* かわいいスクロールバー */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--sky-pale); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb { background: var(--sky); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: #8ecde5; }
+  * { scrollbar-width: thin; scrollbar-color: var(--sky) var(--sky-pale); }
   body {
     font-family: 'Zen Maru Gothic', sans-serif;
     background: var(--sky-pale);
