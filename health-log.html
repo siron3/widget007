@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Health Log</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=DM+Serif+Display:ital@0;1&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #a8d8ea; --sky-light: #d6eef8; --sky-pale: #E4F2FC;
+    --brown: #8b6f5e; --brown-light: #c4a882; --brown-pale: #f5ede6;
+    --blush: #f2c4b8; --mint: #b8dfd0; --lavender: #d4c5e8; --yellow: #fce8a2;
+    --text: #4a3728; --text-muted: #9e7c6a; --text-light: #c4a882;
+    --white: #ffffff; --border: rgba(139,111,94,0.15); --shadow: rgba(139,111,94,0.10);
+    --radius: 14px; --period: #f2c4b8;
+    --energy-high: #70b77e; --energy-mid: #e0a045; --energy-low: #b8c8e0;
+    --mood1: #e07b6a; --mood2: #e0a045; --mood3: #c4a882; --mood4: #70b77e; --mood5: #5b9bd5;
+    --cond1: #70b77e; --cond2: #e0a045; --cond3: #e07b6a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--sky-pale); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb { background: var(--sky); border-radius: 99px; }
+  body {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    background: var(--sky-pale); min-height: 100vh;
+    padding: 20px 16px 40px; color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  .widget { max-width: 680px; margin: 0 auto; }
+
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--brown); }
+  .header-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .tab-row { display: flex; gap: 6px; }
+  .tab-btn {
+    font-size: 11px; font-weight: 700; padding: 5px 12px;
+    border: 1.5px solid var(--border); background: var(--white);
+    border-radius: 99px; cursor: pointer; color: var(--text-muted);
+    font-family: 'Zen Maru Gothic', sans-serif; transition: all 0.15s;
+  }
+  .tab-btn.active, .tab-btn:hover { background: var(--sky-pale); border-color: var(--sky); color: var(--brown); }
+
+  .loading-bar { height: 3px; background: var(--sky-light); border-radius: 99px; margin-bottom: 12px; overflow: hidden; opacity: 0; transition: opacity 0.2s; }
+  .loading-bar.visible { opacity: 1; }
+  .loading-bar-fill { height: 100%; background: linear-gradient(90deg, var(--sky), var(--brown-light)); border-radius: 99px; animation: loadAnim 1.2s ease-in-out infinite; }
+  @keyframes loadAnim { 0%{width:0%;margin-left:0} 50%{width:70%;margin-left:15%} 100%{width:0%;margin-left:100%} }
+
+  .card {
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 16px;
+    box-shadow: 0 2px 12px var(--shadow); margin-bottom: 12px;
+  }
+  .card-title { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 0.05em; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* 履歴 */
+  .log-list { display: flex; flex-direction: column; gap: 6px; }
+  .log-row {
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 10px 14px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    box-shadow: 0 1px 6px var(--shadow);
+  }
+  .log-date { font-size: 11px; font-weight: 700; color: var(--brown); min-width: 54px; }
+  .log-weather { font-size: 14px; }
+  .log-energy { font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 99px; font-family: 'Josefin Sans', sans-serif; letter-spacing: 0.05em; }
+  .log-energy.HIGH { background: rgba(112,183,126,0.2); color: var(--energy-high); }
+  .log-energy.MEDIUM { background: rgba(224,160,69,0.2); color: var(--energy-mid); }
+  .log-energy.LOW { background: rgba(184,200,224,0.3); color: #7a8fa8; }
+  .log-mood { font-size: 16px; }
+  .log-cond { font-size: 10px; font-weight: 600; }
+  .log-sleep { font-size: 10px; color: var(--text-muted); }
+  .log-period { font-size: 9px; padding: 2px 6px; background: rgba(242,196,184,0.3); color: var(--brown); border-radius: 99px; }
+  .log-note { font-size: 10px; color: var(--text-muted); width: 100%; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .empty-msg { text-align: center; padding: 30px; color: var(--text-muted); font-size: 13px; }
+
+  /* グラフ */
+  .chart-wrap { overflow-x: auto; padding-bottom: 4px; }
+  .chart { display: flex; align-items: flex-end; gap: 3px; min-height: 80px; padding: 4px 0; }
+  .chart-col { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 28px; }
+  .chart-bar-wrap { flex: 1; display: flex; align-items: flex-end; width: 100%; min-height: 60px; }
+  .chart-bar { width: 100%; border-radius: 4px 4px 0 0; transition: height 0.4s cubic-bezier(0.34,1.56,0.64,1); min-height: 4px; }
+  .chart-label { font-size: 8.5px; color: var(--text-muted); text-align: center; }
+  .chart-period-row { display: flex; gap: 3px; margin-bottom: 2px; }
+  .chart-period-cell { min-width: 28px; height: 4px; border-radius: 2px; }
+  .chart-period-cell.on { background: var(--period); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .legend-bar { width: 14px; height: 5px; border-radius: 3px; }
+
+  /* カレンダー */
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .cal-month { font-family: 'DM Serif Display', serif; font-size: 16px; color: var(--brown); }
+  .nav-group { display: flex; gap: 4px; align-items: center; }
+  .nav-btn {
+    width: 28px; height: 28px; border: 1.5px solid var(--border);
+    background: var(--white); border-radius: 8px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted); transition: all 0.15s;
+  }
+  .nav-btn:hover { background: var(--sky-pale); border-color: var(--sky); color: var(--brown); }
+  .nav-btn svg { width: 12px; height: 12px; }
+  .today-chip {
+    font-size: 10px; font-weight: 700; padding: 3px 10px;
+    border: 1.5px solid var(--border); background: var(--white);
+    border-radius: 99px; cursor: pointer; color: var(--text-muted);
+    font-family: 'Zen Maru Gothic', sans-serif; transition: all 0.15s;
+  }
+  .today-chip:hover { background: var(--sky-pale); border-color: var(--sky); color: var(--brown); }
+
+  .cal-grid { width: 100%; border-collapse: collapse; }
+  .cal-grid thead th {
+    padding: 7px 4px; font-size: 10px; font-weight: 700; color: var(--text-muted);
+    text-align: center; border-bottom: 1.5px solid var(--border);
+    background: rgba(168,216,234,0.08);
+  }
+  .cal-grid thead th.th-sat { color: var(--sky); }
+  .cal-grid thead th.th-sun { color: #e07b6a; }
+  .cal-cell {
+    vertical-align: top; padding: 5px 4px;
+    border: 1px solid var(--border); height: 74px; text-align: center;
+  }
+  .cal-cell.other-month { background: rgba(228,242,252,0.4); }
+  .cal-cell.is-today { background: rgba(168,216,234,0.12); }
+  .day-num {
+    font-family: 'DM Serif Display', serif; font-size: 12px; color: var(--text-muted);
+    width: 20px; height: 20px; display: inline-flex; align-items: center;
+    justify-content: center; border-radius: 50%; margin-bottom: 3px;
+  }
+  .cal-cell.is-today .day-num { background: var(--sky); color: white; font-size: 11px; }
+  .cal-cell.other-month .day-num { opacity: 0.35; }
+  .cal-cell.is-sat .day-num { color: var(--sky); }
+  .cal-cell.is-sun .day-num { color: #e07b6a; }
+  .energy-badge {
+    display: block; font-size: 8.5px; font-weight: 700;
+    padding: 1px 4px; border-radius: 5px; margin: 0 auto 2px;
+    font-family: 'Josefin Sans', sans-serif; width: fit-content;
+  }
+  .energy-badge.HIGH { background: rgba(112,183,126,0.2); color: var(--energy-high); }
+  .energy-badge.MEDIUM { background: rgba(224,160,69,0.2); color: var(--energy-mid); }
+  .energy-badge.LOW { background: rgba(184,200,224,0.3); color: #7a8fa8; }
+  .cal-dots { display: flex; justify-content: center; gap: 3px; margin-top: 2px; }
+  .cal-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .cal-legend {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px;
+    padding-top: 10px; border-top: 1px solid var(--border);
+  }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--brown); color: white; font-size: 12px;
+    padding: 8px 18px; border-radius: 99px;
+    opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 9999;
+    font-family: 'Zen Maru Gothic', sans-serif;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="widget">
+
+  <div class="header">
+    <div>
+      <div class="header-title">Health Log ✦</div>
+      <div class="header-sub" id="headerSub">読み込み中...</div>
+    </div>
+    <div class="tab-row">
+      <button class="tab-btn active" id="tabHistory" onclick="switchTab('history')">履歴</button>
+      <button class="tab-btn" id="tabGraph" onclick="switchTab('graph')">グラフ</button>
+      <button class="tab-btn" id="tabCal" onclick="switchTab('cal')">カレンダー</button>
+    </div>
+  </div>
+
+  <div class="loading-bar" id="loadingBar"><div class="loading-bar-fill"></div></div>
+
+  <!-- 履歴 -->
+  <div class="view active" id="viewHistory">
+    <div class="card">
+      <div class="card-title">✦ 直近の記録</div>
+      <div class="log-list" id="logList"></div>
+    </div>
+  </div>
+
+  <!-- グラフ -->
+  <div class="view" id="viewGraph">
+    <div class="card">
+      <div class="card-title">✦ エネルギー（直近30日）</div>
+      <div class="chart-wrap"><div class="chart" id="energyChart"></div></div>
+      <div class="legend" style="margin-top:8px">
+        <div class="legend-item"><div class="legend-bar" style="background:var(--energy-high);opacity:0.7"></div>HIGH</div>
+        <div class="legend-item"><div class="legend-bar" style="background:var(--energy-mid);opacity:0.7"></div>MEDIUM</div>
+        <div class="legend-item"><div class="legend-bar" style="background:var(--energy-low);opacity:0.7"></div>LOW</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">✦ 気分の推移（直近30日）</div>
+      <div class="chart-wrap">
+        <div class="chart-period-row" id="periodRow"></div>
+        <div class="chart" id="moodChart"></div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--mood5)"></div>最高</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--mood3)"></div>普通</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--mood1)"></div>最悪</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--period);opacity:0.6"></div>生理期間</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">✦ 睡眠時間（直近30日）</div>
+      <div class="chart-wrap"><div class="chart" id="sleepChart"></div></div>
+    </div>
+  </div>
+
+  <!-- カレンダー -->
+  <div class="view" id="viewCal">
+    <div class="card">
+      <div class="cal-nav">
+        <div class="cal-month" id="calMonth"></div>
+        <div class="nav-group">
+          <button class="nav-btn" onclick="moveMonth(-1)">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7.5 2L4 6l3.5 4"/></svg>
+          </button>
+          <button class="today-chip" onclick="goThisMonth()">今月</button>
+          <button class="nav-btn" onclick="moveMonth(1)">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4.5 2L8 6l-3.5 4"/></svg>
+          </button>
+        </div>
+      </div>
+      <table class="cal-grid">
+        <thead>
+          <tr>
+            <th>月</th><th>火</th><th>水</th><th>木</th><th>金</th>
+            <th class="th-sat">土</th><th class="th-sun">日</th>
+          </tr>
+        </thead>
+        <tbody id="calBody"></tbody>
+      </table>
+      <div class="cal-legend">
+        <div class="legend-item"><span class="energy-badge HIGH" style="display:inline-block">HIGH</span>エネルギー高</div>
+        <div class="legend-item"><span class="energy-badge MEDIUM" style="display:inline-block">MED</span>エネルギー中</div>
+        <div class="legend-item"><span class="energy-badge LOW" style="display:inline-block">LOW</span>エネルギー低</div>
+        <div class="legend-item"><div class="cal-dot" style="background:var(--mood5)"></div>気分良い</div>
+        <div class="legend-item"><div class="cal-dot" style="background:var(--mood1)"></div>気分悪い</div>
+        <div class="legend-item"><div class="cal-dot" style="background:var(--period)"></div>生理中</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://nbduyknklcwqbinvhoih.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iZHV5a25rbGN3cWJpbnZob2loIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2NjMzNjUsImV4cCI6MjA4NzIzOTM2NX0.kzZYqBwfc8vpGszN2W3so2jURsZXlrve4KvUydYKIfA';
+
+async function sbFetch(path) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const t = await res.text(); return t ? JSON.parse(t) : [];
+}
+
+function formatDateJP(s) {
+  const d = new Date(s + 'T00:00:00');
+  return `${d.getMonth()+1}/${d.getDate()}（${'日月火水木金土'[d.getDay()]}）`;
+}
+
+let allLogs = [], currentTab = 'history';
+let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
+const MOOD_EMOJI = ['','😫','😕','😐','🙂','😄'];
+const MOOD_COLORS = ['','#e07b6a','#e0a045','#c4a882','#70b77e','#5b9bd5'];
+const COND_LABEL = ['','🟢 普通','🟡 しんどめ','🔴 しんどい'];
+const COND_COLOR = ['','var(--cond1)','var(--cond2)','var(--cond3)'];
+const MONTHS_JP = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+function setLoading(v) { document.getElementById('loadingBar').classList.toggle('visible', v); }
+
+async function loadAll() {
+  setLoading(true);
+  try {
+    allLogs = await sbFetch('health_logs?select=*&order=date.desc&limit=120');
+    document.getElementById('headerSub').textContent = allLogs.length > 0 ? `${allLogs.length}件の記録` : 'まだ記録がありません';
+    renderCurrent();
+  } catch(e) { showToast('読み込みエラー: ' + e.message); }
+  finally { setLoading(false); }
+}
+
+function renderCurrent() {
+  if (currentTab === 'history') renderHistory();
+  else if (currentTab === 'graph') renderGraphs();
+  else renderCalendar();
+}
+
+function renderHistory() {
+  const el = document.getElementById('logList');
+  if (!allLogs.length) { el.innerHTML = `<div class="empty-msg">まだ記録がありません ✦</div>`; return; }
+  el.innerHTML = allLogs.slice(0, 30).map(r => `
+    <div class="log-row">
+      <div class="log-date">${formatDateJP(r.date)}</div>
+      <span class="log-weather">${r.weather_icon||'—'}</span>
+      ${r.energy ? `<span class="log-energy ${r.energy}">${r.energy}</span>` : ''}
+      <span class="log-mood">${r.mood ? MOOD_EMOJI[r.mood] : '—'}</span>
+      <span class="log-cond" style="color:${r.condition ? COND_COLOR[r.condition] : 'var(--text-muted)'}">${r.condition ? COND_LABEL[r.condition] : '—'}</span>
+      <span class="log-sleep">${r.sleep_hours != null ? r.sleep_hours+'h' : '—'}</span>
+      ${r.period ? '<span class="log-period">生理中</span>' : ''}
+      ${r.condition_note ? `<div class="log-note">${r.condition_note}</div>` : ''}
+    </div>`).join('');
+}
+
+function renderGraphs() {
+  const logs30 = [...allLogs].sort((a,b) => a.date.localeCompare(b.date)).slice(-30);
+  if (!logs30.length) return;
+  const EH = {HIGH:60,MEDIUM:40,LOW:20};
+  const EC = {HIGH:'var(--energy-high)',MEDIUM:'var(--energy-mid)',LOW:'var(--energy-low)'};
+
+  document.getElementById('energyChart').innerHTML = logs30.map(r => {
+    const h = r.energy ? EH[r.energy] : 4;
+    const c = r.energy ? EC[r.energy] : 'var(--border)';
+    return `<div class="chart-col">
+      <div class="chart-bar-wrap"><div class="chart-bar" style="height:${h}px;background:${c};opacity:0.75;border-top:2px solid ${c}"></div></div>
+      <div class="chart-label">${formatDateJP(r.date).split('（')[0]}</div></div>`;
+  }).join('');
+
+  document.getElementById('moodChart').innerHTML = logs30.map(r => {
+    const h = r.mood ? (r.mood/5*60) : 4;
+    const c = r.mood ? MOOD_COLORS[r.mood] : 'var(--border)';
+    return `<div class="chart-col">
+      <div class="chart-bar-wrap"><div class="chart-bar" style="height:${h}px;background:${c}88;border-top:2px solid ${c}"></div></div>
+      <div class="chart-label">${formatDateJP(r.date).split('（')[0]}</div></div>`;
+  }).join('');
+
+  document.getElementById('periodRow').innerHTML = logs30.map(r =>
+    `<div class="chart-period-cell ${r.period?'on':''}" style="min-width:28px"></div>`).join('');
+
+  const maxSleep = Math.max(8, ...logs30.map(r => r.sleep_hours||0));
+  document.getElementById('sleepChart').innerHTML = logs30.map(r => {
+    const h = r.sleep_hours ? (r.sleep_hours/maxSleep*60) : 4;
+    const c = r.sleep_hours >= 7 ? '#70b77e' : r.sleep_hours >= 5 ? '#e0a045' : '#e07b6a';
+    return `<div class="chart-col">
+      <div class="chart-bar-wrap"><div class="chart-bar" style="height:${r.sleep_hours?h:4}px;background:${r.sleep_hours?c+'88':'var(--border)'};border-top:2px solid ${r.sleep_hours?c:'var(--border)'}"></div></div>
+      <div class="chart-label">${formatDateJP(r.date).split('（')[0]}</div></div>`;
+  }).join('');
+}
+
+function renderCalendar() {
+  document.getElementById('calMonth').textContent = `${calYear}年 ${MONTHS_JP[calMonth]}`;
+  const logMap = {};
+  allLogs.forEach(r => { logMap[r.date] = r; });
+  const today = new Date();
+  const firstDow = new Date(calYear, calMonth, 1).getDay();
+  const firstCol = firstDow === 0 ? 6 : firstDow - 1;
+  const lastDate = new Date(calYear, calMonth+1, 0).getDate();
+  const prevLastDate = new Date(calYear, calMonth, 0).getDate();
+  let html = '', date = 1, nextDate = 1;
+  for (let row = 0; row < 6; row++) {
+    if (date > lastDate) break;
+    html += '<tr>';
+    for (let col = 0; col < 7; col++) {
+      let cellDate, isOther = false;
+      const absCol = row*7+col;
+      if (absCol < firstCol) { cellDate = prevLastDate - firstCol + absCol + 1; isOther = true; }
+      else if (date > lastDate) { cellDate = nextDate++; isOther = true; }
+      else { cellDate = date++; }
+      const dk = isOther ? null : `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(cellDate).padStart(2,'0')}`;
+      const isToday = !isOther && today.getFullYear()===calYear && today.getMonth()===calMonth && today.getDate()===cellDate;
+      const log = dk ? logMap[dk] : null;
+      let cls = 'cal-cell';
+      if (isOther) cls += ' other-month';
+      if (isToday) cls += ' is-today';
+      if (col===5) cls += ' is-sat';
+      if (col===6) cls += ' is-sun';
+      const energyHtml = log?.energy ? `<span class="energy-badge ${log.energy}">${log.energy==='MEDIUM'?'MED':log.energy}</span>` : '';
+      const dots = [];
+      if (log?.mood) dots.push(`<div class="cal-dot" style="background:${MOOD_COLORS[log.mood]}"></div>`);
+      if (log?.period) dots.push(`<div class="cal-dot" style="background:var(--period)"></div>`);
+      const dotsHtml = dots.length ? `<div class="cal-dots">${dots.join('')}</div>` : '';
+      html += `<td class="${cls}"><div class="day-num">${cellDate}</div>${energyHtml}${dotsHtml}</td>`;
+    }
+    html += '</tr>';
+  }
+  document.getElementById('calBody').innerHTML = html;
+}
+
+function moveMonth(d) {
+  calMonth += d;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCalendar();
+}
+function goThisMonth() { calYear = new Date().getFullYear(); calMonth = new Date().getMonth(); renderCalendar(); }
+
+function switchTab(tab) {
+  currentTab = tab;
+  ['history','graph','cal'].forEach(t => {
+    const capT = t.charAt(0).toUpperCase()+t.slice(1);
+    document.getElementById('view'+capT).classList.toggle('active', t===tab);
+    document.getElementById('tab'+capT).classList.toggle('active', t===tab);
+  });
+  renderCurrent();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+loadAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Energy & Health</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=DM+Serif+Display:ital@0;1&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #a8d8ea; --sky-light: #d6eef8; --sky-pale: #E4F2FC;
+    --brown: #8b6f5e; --brown-light: #c4a882; --brown-pale: #f5ede6;
+    --blush: #f2c4b8; --mint: #b8dfd0; --lavender: #d4c5e8; --yellow: #fce8a2;
+    --text: #4a3728; --text-muted: #9e7c6a; --text-light: #c4a882;
+    --white: #ffffff; --border: rgba(139,111,94,0.15); --shadow: rgba(139,111,94,0.10);
+    --radius: 14px;
+    --energy-high: #70b77e; --energy-mid: #e0a045; --energy-low: #b8c8e0;
+    --mood1: #e07b6a; --mood2: #e0a045; --mood3: #c4a882; --mood4: #70b77e; --mood5: #5b9bd5;
+    --cond1: #70b77e; --cond2: #e0a045; --cond3: #e07b6a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    background: var(--sky-pale);
+    padding: 16px;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .widget { max-width: 520px; margin: 0 auto; }
+
+  /* ヘッダー */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 16px; color: var(--brown); }
+  .header-date { font-size: 11px; color: var(--text-muted); }
+  .saved-badge {
+    font-size: 10px; padding: 3px 10px; border-radius: 99px;
+    background: var(--mint); color: var(--brown); font-weight: 700;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .saved-badge.show { opacity: 1; }
+
+  /* カード */
+  .card {
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: var(--radius); padding: 16px;
+    box-shadow: 0 2px 12px var(--shadow);
+  }
+
+  .section { margin-bottom: 14px; }
+  .section:last-child { margin-bottom: 0; }
+  .section-label {
+    font-size: 10px; font-weight: 700; color: var(--text-muted);
+    letter-spacing: 0.08em; margin-bottom: 8px; display: block;
+    text-transform: uppercase;
+  }
+
+  /* エネルギーレベル */
+  .energy-row { display: flex; gap: 8px; }
+  .energy-btn {
+    flex: 1; padding: 10px 8px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--white);
+    cursor: pointer; text-align: center; transition: all 0.15s;
+    font-family: 'Josefin Sans', sans-serif; font-size: 12px; font-weight: 600;
+    color: var(--text-muted); letter-spacing: 0.05em;
+  }
+  .energy-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 8px var(--shadow); }
+  .energy-btn .energy-icon { font-size: 18px; display: block; margin-bottom: 3px; }
+  .energy-btn[data-energy="HIGH"].selected { background: rgba(112,183,126,0.15); border-color: var(--energy-high); color: var(--energy-high); }
+  .energy-btn[data-energy="MEDIUM"].selected { background: rgba(224,160,69,0.15); border-color: var(--energy-mid); color: var(--energy-mid); }
+  .energy-btn[data-energy="LOW"].selected { background: rgba(184,200,224,0.25); border-color: var(--energy-low); color: #7a8fa8; }
+
+  /* 気分 */
+  .mood-row { display: flex; gap: 6px; }
+  .mood-btn {
+    flex: 1; padding: 8px 4px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--white);
+    cursor: pointer; text-align: center; transition: all 0.15s;
+    font-size: 20px; line-height: 1;
+  }
+  .mood-btn:hover { border-color: var(--sky); background: var(--sky-pale); transform: scale(1.05); }
+  .mood-btn.selected { transform: scale(1.1); }
+  .mood-btn[data-mood="1"].selected { background: rgba(224,123,106,0.15); border-color: var(--mood1); }
+  .mood-btn[data-mood="2"].selected { background: rgba(224,160,69,0.15); border-color: var(--mood2); }
+  .mood-btn[data-mood="3"].selected { background: rgba(196,168,130,0.15); border-color: var(--mood3); }
+  .mood-btn[data-mood="4"].selected { background: rgba(112,183,126,0.15); border-color: var(--mood4); }
+  .mood-btn[data-mood="5"].selected { background: rgba(91,155,213,0.15); border-color: var(--mood5); }
+  .mood-label { font-size: 8px; color: var(--text-muted); margin-top: 3px; }
+
+  /* 体調 */
+  .cond-row { display: flex; gap: 8px; }
+  .cond-btn {
+    flex: 1; padding: 8px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--white);
+    cursor: pointer; text-align: center; transition: all 0.15s;
+    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    font-family: 'Zen Maru Gothic', sans-serif;
+  }
+  .cond-btn:hover { border-color: var(--sky); background: var(--sky-pale); }
+  .cond-btn[data-cond="1"].selected { background: rgba(112,183,126,0.15); border-color: var(--cond1); color: var(--cond1); }
+  .cond-btn[data-cond="2"].selected { background: rgba(224,160,69,0.15); border-color: var(--cond2); color: var(--cond2); }
+  .cond-btn[data-cond="3"].selected { background: rgba(224,123,106,0.15); border-color: var(--cond3); color: var(--cond3); }
+
+  /* 下段 */
+  .bottom-row { display: flex; gap: 8px; align-items: flex-start; }
+
+  /* 睡眠 */
+  .sleep-wrap { display: flex; align-items: center; gap: 6px; }
+  .sleep-input {
+    width: 64px; padding: 8px 10px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--sky-pale);
+    font-family: 'Zen Maru Gothic', sans-serif; font-size: 13px;
+    color: var(--text); outline: none; text-align: center;
+  }
+  .sleep-input:focus { border-color: var(--sky); background: var(--white); }
+  .sleep-unit { font-size: 11px; color: var(--text-muted); }
+
+  /* 生理トグル */
+  .period-toggle {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 12px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--white);
+    cursor: pointer; transition: all 0.15s; user-select: none;
+    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    font-family: 'Zen Maru Gothic', sans-serif;
+  }
+  .period-toggle.on { background: rgba(242,196,184,0.2); border-color: var(--blush); color: var(--brown); }
+  .period-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); transition: background 0.15s; }
+  .period-toggle.on .period-dot { background: var(--blush); }
+
+  /* メモ */
+  .memo-input {
+    width: 100%; padding: 9px 12px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--sky-pale);
+    font-family: 'Zen Maru Gothic', sans-serif; font-size: 11px;
+    color: var(--text); outline: none; resize: none; height: 52px;
+    transition: border-color 0.15s;
+  }
+  .memo-input:focus { border-color: var(--sky); background: var(--white); }
+
+  /* 保存ボタン */
+  .save-btn {
+    width: 100%; padding: 10px; border-radius: 99px;
+    background: var(--sky); border: none; color: white;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    font-family: 'Zen Maru Gothic', sans-serif; transition: all 0.15s;
+    margin-top: 12px;
+  }
+  .save-btn:hover { background: #8ecde5; }
+  .save-btn.saved { background: var(--mint); }
+
+  /* トースト */
+  .toast {
+    position: fixed; bottom: 20px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--brown); color: white; font-size: 12px;
+    padding: 8px 18px; border-radius: 99px;
+    opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 9999;
+    font-family: 'Zen Maru Gothic', sans-serif;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="widget">
+  <div class="header">
+    <div>
+      <div class="header-title">⚡ Energy & Health</div>
+      <div class="header-date" id="headerDate"></div>
+    </div>
+    <div class="saved-badge" id="savedBadge">保存済み ✦</div>
+  </div>
+
+  <div class="card">
+    <!-- エネルギー -->
+    <div class="section">
+      <span class="section-label">Energy Level</span>
+      <div class="energy-row">
+        <button class="energy-btn" data-energy="HIGH" onclick="selectEnergy('HIGH')">
+          <span class="energy-icon">🔥</span>HIGH
+        </button>
+        <button class="energy-btn" data-energy="MEDIUM" onclick="selectEnergy('MEDIUM')">
+          <span class="energy-icon">⚡</span>MEDIUM
+        </button>
+        <button class="energy-btn" data-energy="LOW" onclick="selectEnergy('LOW')">
+          <span class="energy-icon">🌙</span>LOW
+        </button>
+      </div>
+    </div>
+
+    <!-- 気分 -->
+    <div class="section">
+      <span class="section-label">Mood</span>
+      <div class="mood-row">
+        <div class="mood-btn" data-mood="1" onclick="selectMood(1)">😫<div class="mood-label">最悪</div></div>
+        <div class="mood-btn" data-mood="2" onclick="selectMood(2)">😕<div class="mood-label">微妙</div></div>
+        <div class="mood-btn" data-mood="3" onclick="selectMood(3)">😐<div class="mood-label">普通</div></div>
+        <div class="mood-btn" data-mood="4" onclick="selectMood(4)">🙂<div class="mood-label">良い</div></div>
+        <div class="mood-btn" data-mood="5" onclick="selectMood(5)">😄<div class="mood-label">最高</div></div>
+      </div>
+    </div>
+
+    <!-- 体調 -->
+    <div class="section">
+      <span class="section-label">体調</span>
+      <div class="cond-row">
+        <button class="cond-btn" data-cond="1" onclick="selectCond(1)">🟢 普通</button>
+        <button class="cond-btn" data-cond="2" onclick="selectCond(2)">🟡 しんどめ</button>
+        <button class="cond-btn" data-cond="3" onclick="selectCond(3)">🔴 しんどい</button>
+      </div>
+    </div>
+
+    <!-- 睡眠・生理 -->
+    <div class="section">
+      <span class="section-label">Sleep & Other</span>
+      <div class="bottom-row">
+        <div class="sleep-wrap">
+          <input class="sleep-input" id="sleepInput" type="number" step="0.5" min="0" max="24" placeholder="7.5">
+          <span class="sleep-unit">h 睡眠</span>
+        </div>
+        <div class="period-toggle" id="periodToggle" onclick="togglePeriod()">
+          <div class="period-dot"></div>
+          <span id="periodLabel">生理 OFF</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- メモ -->
+    <div class="section">
+      <span class="section-label">メモ</span>
+      <textarea class="memo-input" id="memoInput" placeholder="体調メモ、気になること…"></textarea>
+    </div>
+
+    <button class="save-btn" id="saveBtn" onclick="saveLog()">記録する ✦</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://nbduyknklcwqbinvhoih.supabase.co';
+const SUPABASE_KEY = 'YOUR_ANON_KEY_HERE';
+
+async function sbFetch(path, options = {}) {
+  const { headers: extraHeaders, ...rest } = options;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...rest,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      ...(extraHeaders || {})
+    }
+  });
+  if (res.status === 204) return null;
+  if (!res.ok) throw new Error(await res.text());
+  const t = await res.text();
+  return t ? JSON.parse(t) : null;
+}
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+let selectedEnergy = null, selectedMood = null, selectedCond = null, periodOn = false;
+
+function selectEnergy(val) {
+  selectedEnergy = val;
+  document.querySelectorAll('.energy-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector(`.energy-btn[data-energy="${val}"]`).classList.add('selected');
+  autoSave();
+}
+function selectMood(val) {
+  selectedMood = val;
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector(`.mood-btn[data-mood="${val}"]`).classList.add('selected');
+  autoSave();
+}
+function selectCond(val) {
+  selectedCond = val;
+  document.querySelectorAll('.cond-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector(`.cond-btn[data-cond="${val}"]`).classList.add('selected');
+  autoSave();
+}
+function togglePeriod() {
+  periodOn = !periodOn;
+  document.getElementById('periodToggle').classList.toggle('on', periodOn);
+  document.getElementById('periodLabel').textContent = periodOn ? '生理 ON' : '生理 OFF';
+  autoSave();
+}
+
+let saveTimer = null;
+function autoSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveLog, 1500);
+}
+
+async function saveLog() {
+  const payload = {
+    date: todayStr(),
+    energy: selectedEnergy,
+    mood: selectedMood,
+    condition: selectedCond,
+    period: periodOn,
+    sleep_hours: document.getElementById('sleepInput').value ? parseFloat(document.getElementById('sleepInput').value) : null,
+    condition_note: document.getElementById('memoInput').value.trim() || null,
+  };
+
+  try {
+    await sbFetch('health_logs', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(payload)
+    });
+    const badge = document.getElementById('savedBadge');
+    badge.classList.add('show');
+    setTimeout(() => badge.classList.remove('show'), 2000);
+    document.getElementById('saveBtn').textContent = '更新しました ✦';
+    document.getElementById('saveBtn').classList.add('saved');
+    setTimeout(() => {
+      document.getElementById('saveBtn').textContent = '記録する ✦';
+      document.getElementById('saveBtn').classList.remove('saved');
+    }, 2000);
+  } catch(e) {
+    showToast('保存エラー: ' + e.message);
+  }
+}
+
+async function loadToday() {
+  try {
+    const rows = await sbFetch(`health_logs?date=eq.${todayStr()}&select=*`);
+    if (rows && rows.length > 0) {
+      const r = rows[0];
+      if (r.energy) selectEnergy(r.energy);
+      if (r.mood) selectMood(r.mood);
+      if (r.condition) selectCond(r.condition);
+      if (r.period) { periodOn = true; document.getElementById('periodToggle').classList.add('on'); document.getElementById('periodLabel').textContent = '生理 ON'; }
+      if (r.sleep_hours) document.getElementById('sleepInput').value = r.sleep_hours;
+      if (r.condition_note) document.getElementById('memoInput').value = r.condition_note;
+      document.getElementById('saveBtn').textContent = '更新する ✦';
+    }
+  } catch(e) { console.error(e); }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// 初期化
+const d = new Date();
+const dow = ['日','月','火','水','木','金','土'][d.getDay()];
+document.getElementById('headerDate').textContent = `${d.getMonth()+1}月${d.getDate()}日（${dow}）`;
+
+// メモ欄の自動保存
+document.getElementById('memoInput').addEventListener('input', autoSave);
+document.getElementById('sleepInput').addEventListener('input', autoSave);
+
+loadToday();
+</script>
+</body>
+</html>
